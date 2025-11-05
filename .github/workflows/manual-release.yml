@@ -4,6 +4,9 @@ name: Manual Release to NuGet
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -25,13 +28,13 @@ jobs:
       # Pack the client NuGet package
       - name: Build and pack
         run: dotnet pack
-          --configuration Release
+          --configuration Unsigned
           --output "${{ github.workspace }}/artifacts/packages"
           ${{ env.version_suffix_args }}
 
       - name: Run unit tests
         run: dotnet test
-          --configuration Release
+          --configuration Unsigned
           --filter="TestCategory=Smoke&TestCategory!=Manual"
           --logger "trx;LogFileName=${{ github.workspace }}/artifacts/test-results/smoke.trx"
           ${{ env.version_suffix_args }}
