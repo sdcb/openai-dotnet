@@ -1,0 +1,51 @@
+# This workflow is manually triggered to build and publish the package to NuGet without signing.
+# It builds with an alpha version suffix and publishes directly to nuget.org.
+name: Manual Release to NuGet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-publish:
+    name: Build and Publish
+    runs-on: ubuntu-22.04
+    env:
+      version_suffix_args: ${{ format('/p:VersionSuffix="alpha.{0}"', github.run_number) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Restore tools
+        run: dotnet tool restore --add-source https://pkgs.dev.azure.com/azure-sdk/public/_packaging/azure-sdk-for-net/nuget/v3/index.json
+
+      # Pack the client NuGet package
+      - name: Build and pack
+        run: dotnet pack
+          --configuration Release
+          --output "${{ github.workspace }}/artifacts/packages"
+          ${{ env.version_suffix_args }}
+
+      - name: Run unit tests
+        run: dotnet test
+          --configuration Release
+          --filter="TestCategory=Smoke&TestCategory!=Manual"
+          --logger "trx;LogFileName=${{ github.workspace }}/artifacts/test-results/smoke.trx"
+          ${{ env.version_suffix_args }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: build-artifacts
+          path: ${{ github.workspace }}/artifacts
+
+      - name: Publish package to nuget.org
+        run: dotnet nuget push
+            ${{ github.workspace }}/artifacts/packages/*.nupkg
+            --source https://api.nuget.org/v3/index.json
+            --api-key ${{ secrets.NUGET_API_KEY }}
+            --skip-duplicate
