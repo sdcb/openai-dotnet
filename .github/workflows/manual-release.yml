@@ -27,13 +27,13 @@ jobs:
 
       # Pack the client NuGet package
       - name: Build and pack
-        run: dotnet pack
+        run: dotnet pack src/OpenAI.csproj
           --configuration Unsigned
           --output "${{ github.workspace }}/artifacts/packages"
           ${{ env.version_suffix_args }}
 
       - name: Run unit tests
-        run: dotnet test
+        run: dotnet test tests/OpenAI.Tests.csproj
           --configuration Unsigned
           --filter="TestCategory=Smoke&TestCategory!=Manual"
           --logger "trx;LogFileName=${{ github.workspace }}/artifacts/test-results/smoke.trx"
